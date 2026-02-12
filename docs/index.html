@@ -1,1 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>道路線形計算（iPadオフラインPWA）</title>
 
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <script src="./scripts/s0.js" defer></script>
+  <script src="./scripts/s1.js" defer></script>
+
+  <style>
+    :root{
+      --bg:#f2f6ff; --card:#fff; --text:#0f172a; --muted:#64748b; --line:#e2e8f0;
+      --accent:#2563eb; --ok:#16a34a; --warn:#b45309;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+      background:linear-gradient(135deg,#eff6ff,#eef2ff);
+      color:var(--text);
+    }
+    .wrap{ max-width:1180px; margin:0 auto; padding:16px; }
+    .header{
+      background:var(--card); border:1px solid var(--line); border-radius:14px;
+      padding:16px; box-shadow:0 10px 25px rgba(0,0,0,.06);
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(6px);
+    }
+    .title{ display:flex; gap:10px; align-items:center; font-weight:900; font-size:20px; flex-wrap:wrap; }
+    .badge{ font-size:12px; color:var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:999px; }
+    .grid{ display:grid; gap:10px; }
+    .grid-2{ grid-template-columns:1fr 1fr; }
+    .grid-3{ grid-template-columns:1fr 1fr 1fr; }
+    .grid-4{ grid-template-columns:1fr 1fr 1fr 1fr; }
+    @media (max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+    .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-top:12px; }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+    input, select, button, textarea{
+      width:100%; padding:10px 10px; border:1px solid var(--line); border-radius:10px;
+      background:#fff; font-size:14px;
+    }
+    input[type="number"]{ font-variant-numeric: tabular-nums; }
+    textarea{ min-height:88px; resize:vertical; }
+    .card{
+      margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:14px;
+      padding:14px; box-shadow:0 10px 25px rgba(0,0,0,.05);
+    }
+    .card h2{ margin:0 0 10px; font-size:16px; }
+    .btn{
+      border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer;
+      background:var(--accent); color:#fff;
+    }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .btn-ghost{ background:#fff; color:var(--text); border:1px solid var(--line); }
+    .btn-ok{ background:var(--ok); }
+    .mini{ font-size:12px; color:var(--muted); }
+    .warn{ color:var(--warn); font-size:13px; margin-top:6px; }
+    table{ width:100%; border-collapse:collapse; overflow:auto; }
+    th,td{ border:1px solid var(--line); padding:8px; font-size:13px; }
+    th{ background:#f1f5f9; text-align:left; }
+    .right{ text-align:right; }
+    .pill{
+      display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line);
+      font-size:12px; color:var(--muted);
+    }
+    .tabs{ display:flex; gap:8px; margin-top:12px; }
+    .tab{
+      flex:1; padding:10px; border-radius:12px; border:1px solid var(--line); background:#fff;
+      font-weight:900; cursor:pointer;
+    }
+    .kpi{ font-weight:900; color:var(--accent); }
+    .canvasWrap{ width:100%; overflow:auto; }
+    canvas{ border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .footer{ margin-top:16px; text-align:center; color:var(--muted); font-size:12px; }
+    .sep{ height:1px; background:var(--line); margin:10px 0; }
+
+    /* header collapse */
+    .headerToggle{ width:auto; padding:6px 10px; font-weight:900; }
+    .title .headerToggle{ margin-left:auto; }
+    .header.collapsed{ padding:10px 14px; }
+    .header.collapsed #headerBody{ display:none; }
+    .header.collapsed .badge{ display:none; }
+
+    /* cross elements */
+    .xsElemList{ border:1px solid var(--line); border-radius:12px; padding:6px; background:#fff; }
+    .xsRow{ margin:6px 0; border:1px solid var(--line); border-radius:12px; }
+    .xsRow.dragging{ opacity:.6; }
+
+  
+  .xsPick { background: #fef3c7; }
+  tr[data-xs-pick] { cursor: pointer; }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="header" id="topHeader">
+    <div class="title">
+      道路線形計算（iPadオフラインPWA） <span class="badge" id="appVerBadge">v--</span>
+      <span class="badge">同一ページ：平面 → 縦断 → 出力 → 保存 / 自動保存（localStorage）</span>
+      <button id="btnHeaderToggle" class="btn btn-ghost headerToggle" type="button" aria-label="ヘッダ表示切替">▲</button>
+    </div>
+
+    <div id="headerBody">
+    <div class="row">
+      <div style="flex:1; min-width:220px;">
+        <label>案件名</label>
+        <input id="projectName" type="text" />
+      </div>
+
+      <div style="width:170px;">
+        <label>座標小数桁（N/E）</label>
+        <select id="coordDecimals">
+          <option value="3">小数3桁</option>
+          <option value="4">小数4桁</option>
+        </select>
+      </div>
+
+      <div style="width:160px;">
+        <label>測点表示ピッチ（整数m）</label>
+        <input id="staPitch" type="text" inputmode="numeric" autocomplete="off" />
+      </div>
+
+      <div style="width:160px;">
+        <label>出力間隔（整数m）</label>
+        <input id="outputStep" type="text" inputmode="numeric" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab" data-jump="secPlan" type="button">平面</button>
+      <button class="tab" data-jump="secProfile" type="button">縦断</button>
+      <button class="tab" data-jump="secCross" type="button">横断</button>
+      <button class="tab" data-jump="secOutput" type="button">出力</button>
+      <button class="tab" data-jump="secSave" type="button">保存</button>
+    </div>
+    <div class="mini" id="bootStatus" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div id="viewPlan"></div>
+  <div id="viewProfile"></div>
+  <div id="viewCross"></div>
+  <div id="viewOutput"></div>
+  <div id="viewSave"></div>
+
+  <div class="footer">ホーム画面に追加して使う前提（PWA）。まずは一度オンラインで開いてキャッシュしてね。</div>
+</div>
+
+
+
+<datalist id="staAllList"></datalist>
+<script>
+(function(){
+  // populate datalist with grid stations based on current settings + existing grade endpoints
+  const fillStaList = ()=>{
+    const dl = document.getElementById("staAllList");
+    if (!dl) return;
+    const pitch = Math.max(1, Math.floor((window.state?.staPitch)||1));
+    const vals = new Set();
+    try{
+      const p = window.state?.profile;
+      if (p){
+        vals.add(+p.startSta||0);
+        for (const g of (p.grades||[])){
+          if (Number.isFinite(+g.nextSta)) vals.add(+g.nextSta);
+        }
+      }
+      const planLen = window.state?.plan?.totalLen;
+      if (Number.isFinite(+planLen)){
+        const min = Math.min(0, ...Array.from(vals));
+        const max = Math.max(+planLen, ...Array.from(vals));
+        const g0 = Math.floor(min/pitch)*pitch;
+        const g1 = Math.ceil(max/pitch)*pitch;
+        for (let s=g0; s<=g1+1e-9; s+=pitch){
+          vals.add(+s.toFixed(3));
+        }
+      }
+    }catch(e){}
+    const arr = Array.from(vals).filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
+    dl.innerHTML = "";
+    for (const v of arr){
+      const o = document.createElement("option");
+      o.value = v.toFixed(3);
+      dl.appendChild(o);
+    }
+  };
+  window.__FILL_STA_LIST__ = fillStaList;
+})();
+</script>
+
+</body>
+</html>

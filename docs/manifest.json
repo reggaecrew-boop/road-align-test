@@ -1,0 +1,9 @@
+{
+  "name": "線形計算書PWA",
+  "short_name": "線形計算書",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb"
+}
