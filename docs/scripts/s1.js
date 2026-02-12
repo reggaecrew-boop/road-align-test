@@ -5848,24 +5848,6 @@ const cr = computeCrossSide("common", "right");
 
       </div>
 
-      <div class="row" style="margin-top:10px; align-items:flex-end;">
-        <div style="width:180px;">
-          <label>拡幅割付（線形）</label>
-          <label class="mini"><input id="xsTaperEnabled" type="checkbox" ${state.cross.taper && state.cross.taper.enabled ? "checked" : ""} /> 有効</label>
-        </div>
-        <div style="width:200px;">
-          <label>アンカー距離 右(+)(m)</label>
-          <input id="xsAnchorRight" type="number" step="0.001" min="0" value="${Number(state.cross.taper?.anchorRight ?? 3.0).toFixed(3)}" />
-        </div>
-        <div style="width:200px;">
-          <label>アンカー距離 左(-)(m)</label>
-          <input id="xsAnchorLeft" type="number" step="0.001" min="0" value="${Number(state.cross.taper?.anchorLeft ?? 3.0).toFixed(3)}" />
-        </div>
-        <div style="flex:1; min-width:260px;">
-          <div class="mini">例外測点の最外端距離を制御点として幅員を線形補間し、アンカーより外側の距離をシフトして割付します（左右独立）。</div>
-        </div>
-      </div>
-
       <div class="grid grid-2" style="margin-top:10px;">
         <div>
           <div class="pill">右側（+）エレメント（${(state.cross.ui?.elemMode==="override")?"例外":"標準"}）</div>
@@ -5990,7 +5972,30 @@ const cr = computeCrossSide("common", "right");
       </div>
       <div class="mini" id="xsPreviewTable" style="margin-top:10px;"></div>
 
+      
       <div class="sep"></div>
+      <h2 style="margin-top:0;">横断範囲とアンカー</h2>
+      <div class="mini">基本は空白（未入力）で横断幅の制限なし。必要なときだけ拡幅割付とアンカー距離を設定します。</div>
+      <div class="row" style="margin-top:10px; align-items:flex-end;">
+        <div style="width:180px;">
+          <label>拡幅割付（線形）</label>
+          <label class="mini"><input id="xsTaperEnabled" type="checkbox" ${state.cross.taper && state.cross.taper.enabled ? "checked" : ""} /> 有効</label>
+        </div>
+        <div style="width:200px;">
+          <label>アンカー距離 右(+)(m)</label>
+          <input id="xsAnchorRight" type="number" step="0.001" min="0" value="${Number(state.cross.taper?.anchorRight ?? 3.0).toFixed(3)}" />
+        </div>
+        <div style="width:200px;">
+          <label>アンカー距離 左(-)(m)</label>
+          <input id="xsAnchorLeft" type="number" step="0.001" min="0" value="${Number(state.cross.taper?.anchorLeft ?? 3.0).toFixed(3)}" />
+        </div>
+        <div style="flex:1; min-width:260px;">
+          <div class="mini">例外測点の最外端距離を制御点として幅員を線形補間し、アンカーより外側の距離をシフトして割付します（左右独立）。</div>
+        </div>
+      </div>
+
+      
+<div class="sep"></div>
       <h3 style="margin:0;">指定点の計画標高</h3>
       <div class="mini">STA＋左右＋幅を入れると、その点を簡易横断図（緑丸）と平面図にプロットして計画標高を表示します。</div>
       <div class="grid grid-3" style="margin-top:10px;">
