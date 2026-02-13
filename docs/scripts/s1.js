@@ -2467,6 +2467,7 @@ if (!Number.isFinite(obj.nextSegId)) {
     const es = state.cross.elemCommon[sideKey];
     if (!es || typeof es !== 'object' || Array.isArray(es)) state.cross.elemCommon[sideKey] = { items:[], nextId:1 };
     if (!Array.isArray(state.cross.elemCommon[sideKey].items)) state.cross.elemCommon[sideKey].items = [];
+    if (!Number.isFinite(Number(state.cross.elemCommon[sideKey].anchorId))) state.cross.elemCommon[sideKey].anchorId = 0;
     if (!Number.isFinite(Number(state.cross.elemCommon[sideKey].nextId))) {
       const mx = Math.max(0, ...state.cross.elemCommon[sideKey].items.map(it=>Number(it?.id)||0));
       state.cross.elemCommon[sideKey].nextId = mx + 1;
@@ -2632,6 +2633,7 @@ const ensureElemOverrideInitialized = (staKey)=>{
       state.cross.elemOverrides[staKey][side] = { items:[], nextId:1 };
     }
     if (!Array.isArray(state.cross.elemOverrides[staKey][side].items)) state.cross.elemOverrides[staKey][side].items = [];
+    if (!Number.isFinite(Number(state.cross.elemOverrides[staKey][side].anchorId))) state.cross.elemOverrides[staKey][side].anchorId = 0;
     if (!state.cross.elemOverrides[staKey][side].items.length && Array.isArray(state.cross.overrides?.[staKey]?.[side]?.segs) && state.cross.overrides[staKey][side].segs.length) {
       state.cross.elemOverrides[staKey][side].items = buildElemFromSegs(state.cross.overrides[staKey][side].segs);
       state.cross.elemOverrides[staKey][side].nextId = Math.max(0, ...state.cross.elemOverrides[staKey][side].items.map(it=>it.id||0)) + 1;
@@ -2689,6 +2691,7 @@ const renderCrossElemListHtml = (sideKey)=>{
   const store = getActiveElemStore(sideKey);
   const items = store?.items || [];
   const selId = Number(state.cross.ui?.elemSel?.[sideKey] || 0);
+  const anchorId = Number(store?.anchorId || 0);
 
   const optType = (v)=>[
     ['PAV','路面(%)'],['STEP','段差'],['SLOPE_H','法面(H)'],['SLOPE_EXT','法面(延長)'],['FLAT','水平(0%)']
@@ -2746,6 +2749,13 @@ const renderCrossElemListHtml = (sideKey)=>{
                 <select class="xsElInput" data-xs-side="${sideKey}" data-xs-id="${id}" data-xs-field="type">
                   ${optType(type)}
                 </select>
+              </div>
+              <div style="width:150px;">
+                <label>幅員固定点</label>
+                <div class="mini" style="display:flex; align-items:center; gap:6px;">
+                  <input type="checkbox" class="xsAnchorPick" data-xs-side="${sideKey}" data-xs-id="${id}" ${id===anchorId?"checked":""} />
+                  <span>${sideKey==="right"?"右":"左"}</span>
+                </div>
               </div>
               <div style="flex:1; min-width:260px;">
                 ${inputs}
@@ -2895,6 +2905,52 @@ const computeCrossSide = (scope, side, staKey)=>{
     start = end;
   }
   return { rows, lastEnd: start, lastZ: z, warnings };
+};
+
+const evalCrossZAtX = (rows, x)=>{
+  rows = Array.isArray(rows) ? rows : [];
+  x = Number(x);
+  if (!Number.isFinite(x)) return 0;
+  let z = 0;
+  for (const r of rows) {
+    const start = Number(r.start)||0;
+    const end = Number(r.end)||0;
+    const slopePct = Number(r.slopePct)||0;
+    const stepDz = Number(r.stepDz)||0;
+    if (x <= start + 1e-12) return z;
+    const segEnd = Math.min(x, end);
+    const span = Math.max(0, segEnd - start);
+    z += (slopePct/100.0) * span;
+    if (x >= end - 1e-12) z += stepDz;
+    if (x <= end + 1e-12) return z;
+  }
+  return z;
+};
+
+const calcAnchorWidthFromElems = (items, anchorId, sideKey, widthLimit)=>{
+  items = Array.isArray(items) ? items : [];
+  anchorId = Number(anchorId)||0;
+  widthLimit = Number(widthLimit)||0;
+  let x = 0;
+  for (const it of items) {
+    const id = Number(it?.id)||0;
+    const type = String(it?.type||'PAV');
+    if (type==='PAV' || type==='FLAT') x += Number(it?.L)||0;
+    else if (type==='SLOPE_H') x += (Number(it?.ratioX)||0) * (Number(it?.H)||0);
+    else if (type==='SLOPE_EXT') x = widthLimit;
+    // STEP: no x
+    if (id===anchorId) return Math.max(0, x);
+  }
+  return null;
+};
+
+const getElemStoreForStaKey = (staKey, sideKey)=>{
+  ensureCrossState();
+  staKey = String(staKey||'').trim().replace(/^STA\s*/i,'').trim();
+  if (staKey && state.cross.elemOverrides && state.cross.elemOverrides[staKey] && state.cross.elemOverrides[staKey][sideKey]) {
+    return state.cross.elemOverrides[staKey][sideKey];
+  }
+  return state.cross.elemCommon?.[sideKey] || null;
 };
 
 
@@ -6243,6 +6299,22 @@ const cr = computeCrossSide("common", "right");
 
     // inputs
     list.addEventListener('change', (ev)=>{
+      const ap = ev.target.closest('.xsAnchorPick');
+      if (ap) {
+        const id = Number(ap.dataset.xsId);
+        const side = String(ap.dataset.xsSide||sideKey);
+        const store = getActiveElemStore(side);
+        if (!store) return;
+        const checked = !!ap.checked;
+        store.anchorId = checked ? id : 0;
+        // single-select per side
+        if (checked) {
+          // nothing else needed; rerender will reflect
+        }
+        saveState();
+        render();
+        return;
+      }
       const el = ev.target.closest('.xsElInput');
       if (!el) return;
       const id = Number(el.dataset.xsId);
@@ -6741,6 +6813,34 @@ const cr = computeCrossSide("common", "right");
         landmarks.push({ key:`L_STEP_UP_${stepIdxL}`, label:`左 段差上 #${stepIdxL}`, x, z:zUp });
         landmarks.push({ key:`L_STEP_DN_${stepIdxL}`, label:`左 段差下 #${stepIdxL}`, x, z:zDown });
       }
+    }
+
+    // width fixed points (display only)
+    const staKeyForAnchor = String(tok||'').trim().replace(/^STA\s*/i,'').trim();
+    try {
+      const xr = getXrangeForStaKey(staKeyForAnchor);
+      // right
+      const stR = getElemStoreForStaKey(staKeyForAnchor, 'right');
+      const aR = Number(stR?.anchorId||0);
+      if (aR>0) {
+        const wR = calcAnchorWidthFromElems(stR?.items||[], aR, 'right', xr.R);
+        if (Number.isFinite(wR)) {
+          const zR = evalCrossZAtX(rCalc.rows, wR);
+          landmarks.push({ key:'ANCHOR_R', label:`幅員固定点（右） W=${wR.toFixed(3)}m`, x:wR, z:zR });
+        }
+      }
+      // left
+      const stL = getElemStoreForStaKey(staKeyForAnchor, 'left');
+      const aL = Number(stL?.anchorId||0);
+      if (aL>0) {
+        const wL = calcAnchorWidthFromElems(stL?.items||[], aL, 'left', xr.L);
+        if (Number.isFinite(wL)) {
+          const zL = evalCrossZAtX(lCalc.rows, wL);
+          landmarks.push({ key:'ANCHOR_L', label:`幅員固定点（左） W=${wL.toFixed(3)}m`, x:-wL, z:zL });
+        }
+      }
+    } catch(e) {
+      // ignore
     }
 
     // slope shoulders/toes (from element-generated segs only: row.src==='SLOPE')
