@@ -93,6 +93,27 @@
   
   .xsPick { background: #fef3c7; }
   tr[data-xs-pick] { cursor: pointer; }
+
+    details.acc{ margin-top:14px; }
+    details.acc summary{
+      cursor:pointer; user-select:none;
+      padding:12px 14px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      border-radius:14px;
+      font-weight:900;
+      list-style:none;
+    }
+    details.acc summary::-webkit-details-marker{ display:none; }
+    details.acc summary::before{
+      content:"▸";
+      display:inline-block;
+      width:1.2em;
+      color:var(--muted);
+    }
+    details.acc[open] summary::before{ content:"▾"; }
+    details.acc[open] summary{ margin-bottom:10px; }
+
 </style>
 </head>
 
@@ -106,47 +127,69 @@
     </div>
 
     <div id="headerBody">
-    <div class="row">
-      <div style="flex:1; min-width:220px;">
-        <label>案件名</label>
-        <input id="projectName" type="text" />
+    <details class="acc" id="acc_settings" open>
+      <summary>設定</summary>
+      <div class="row">
+        <div style="flex:1; min-width:220px;">
+          <label>案件名</label>
+          <input id="projectName" type="text" />
+        </div>
+
+        <div style="width:170px;">
+          <label>座標小数桁（N/E）</label>
+          <select id="coordDecimals">
+            <option value="3">小数3桁</option>
+            <option value="4">小数4桁</option>
+          </select>
+        </div>
+
+        <div style="width:160px;">
+          <label>測点表示ピッチ（整数m）</label>
+          <input id="staPitch" type="text" inputmode="numeric" autocomplete="off" />
+        </div>
+
+        <div style="width:160px;">
+          <label>出力間隔（整数m）</label>
+          <input id="outputStep" type="text" inputmode="numeric" autocomplete="off" />
+        </div>
       </div>
 
-      <div style="width:170px;">
-        <label>座標小数桁（N/E）</label>
-        <select id="coordDecimals">
-          <option value="3">小数3桁</option>
-          <option value="4">小数4桁</option>
-        </select>
+      <div class="tabs">
+        <button class="tab" data-jump="acc_plan" type="button">平面</button>
+        <button class="tab" data-jump="acc_profile" type="button">縦断</button>
+        <button class="tab" data-jump="acc_cross" type="button">横断</button>
+        <button class="tab" data-jump="acc_output" type="button">出力</button>
+        <button class="tab" data-jump="acc_save" type="button">保存</button>
       </div>
-
-      <div style="width:160px;">
-        <label>測点表示ピッチ（整数m）</label>
-        <input id="staPitch" type="text" inputmode="numeric" autocomplete="off" />
-      </div>
-
-      <div style="width:160px;">
-        <label>出力間隔（整数m）</label>
-        <input id="outputStep" type="text" inputmode="numeric" autocomplete="off" />
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab" data-jump="secPlan" type="button">平面</button>
-      <button class="tab" data-jump="secProfile" type="button">縦断</button>
-      <button class="tab" data-jump="secCross" type="button">横断</button>
-      <button class="tab" data-jump="secOutput" type="button">出力</button>
-      <button class="tab" data-jump="secSave" type="button">保存</button>
-    </div>
-    <div class="mini" id="bootStatus" style="margin-top:8px;"></div>
+      <div class="mini" id="bootStatus" style="margin-top:8px;"></div>
+    </details>
     </div>
   </div>
 
-  <div id="viewPlan"></div>
-  <div id="viewProfile"></div>
-  <div id="viewCross"></div>
-  <div id="viewOutput"></div>
-  <div id="viewSave"></div>
+  <details class="acc" id="acc_plan">
+    <summary>平面</summary>
+    <div id="viewPlan"></div>
+  </details>
+
+  <details class="acc" id="acc_profile">
+    <summary>縦断</summary>
+    <div id="viewProfile"></div>
+  </details>
+
+  <details class="acc" id="acc_cross" open>
+    <summary>横断</summary>
+    <div id="viewCross"></div>
+  </details>
+
+  <details class="acc" id="acc_output">
+    <summary>出力</summary>
+    <div id="viewOutput"></div>
+  </details>
+
+  <details class="acc" id="acc_save">
+    <summary>保存</summary>
+    <div id="viewSave"></div>
+  </details>
 
   <div class="footer">ホーム画面に追加して使う前提（PWA）。まずは一度オンラインで開いてキャッシュしてね。</div>
 </div>
