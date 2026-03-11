@@ -82,7 +82,7 @@ const LS_KEY = LS_KEY_NEW;
 
 // --- UI state (header collapse) ---
 const UI_KEY = "road_align_pwa_ui_v1";
-let uiState = { headerCollapsed: false, coordSearch: "" };
+let uiState = { headerCollapsed: false, coordSearch: "", accOpen: { settings:true, plan:false, profile:false, cross:true, output:false, save:false } };
 try {
   const raw = LS.get(UI_KEY);
   if (raw) uiState = Object.assign(uiState, JSON.parse(raw));
@@ -104,6 +104,31 @@ function applyHeaderCollapsed(){
 }
 function saveUI(){
   try { LS.set(UI_KEY, JSON.stringify(uiState)); } catch(e) {}
+}
+
+function applyAccordionStates(){
+  const map = ["settings","plan","profile","cross","output","save"];
+  if (!uiState.accOpen || typeof uiState.accOpen !== "object") {
+    uiState.accOpen = { settings:true, plan:false, profile:false, cross:true, output:false, save:false };
+  }
+  for (const key of map){
+    const el = document.getElementById("acc_" + key);
+    if (!el) continue;
+    if (typeof uiState.accOpen[key] === "boolean") el.open = !!uiState.accOpen[key];
+  }
+}
+function bindAccordionStates(){
+  const map = ["settings","plan","profile","cross","output","save"];
+  for (const key of map){
+    const el = document.getElementById("acc_" + key);
+    if (!el || el.__accBound) continue;
+    el.__accBound = true;
+    el.addEventListener("toggle", ()=>{
+      uiState.accOpen = uiState.accOpen || {};
+      uiState.accOpen[key] = !!el.open;
+      saveUI();
+    });
+  }
 }
 
 let state = {
@@ -7549,12 +7574,20 @@ if (Number.isFinite(res.total) && res.total >= 0 && Number.isFinite(pitchStep)) 
   saveState();
 };
 
-// Navigation buttons (jump to section)
+// Navigation buttons (jump to section / open accordion)
 document.querySelectorAll("[data-jump]").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     const id = btn.getAttribute("data-jump");
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+    if (!el) return;
+    if (el.tagName && el.tagName.toLowerCase() === "details") {
+      el.open = true;
+      uiState.accOpen = uiState.accOpen || {};
+      const key = String(id).replace(/^acc_/, "");
+      uiState.accOpen[key] = true;
+      saveUI();
+    }
+    el.scrollIntoView({ behavior:"smooth", block:"start" });
   });
 });
 
@@ -7569,6 +7602,8 @@ document.querySelectorAll("[data-jump]").forEach(btn=>{
     });
   }
   applyHeaderCollapsed();
+  applyAccordionStates();
+  bindAccordionStates();
 })();
 
 
@@ -7579,7 +7614,8 @@ document.querySelectorAll("[data-jump]").forEach(btn=>{
 })();
 
 render();
-
+applyAccordionStates();
+bindAccordionStates();
 
 /* Tab JSON export bind */
 (function(){
